@@ -1,0 +1,157 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Demo de Infrastructure as Code con ARM: crea un Storage Account, un App Service Plan y una Web App, y publica index.html desde GitHub."
+  },
+  "parameters": {
+    "projectName": {
+      "type": "string",
+      "defaultValue": "armdemo",
+      "minLength": 3,
+      "maxLength": 11,
+      "metadata": {
+        "description": "Prefijo para nombrar los recursos (solo minusculas y numeros)."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Region de Azure. Por defecto, la misma del Resource Group."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "allowedValues": [
+        "dev",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Ambiente que se despliega (se guarda como tag y app setting)."
+      }
+    },
+    "appServiceSku": {
+      "type": "string",
+      "defaultValue": "F1",
+      "allowedValues": [
+        "F1",
+        "B1"
+      ],
+      "metadata": {
+        "description": "Tamano del App Service Plan. F1 = gratis, B1 = de pago."
+      }
+    },
+    "repoUrl": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "URL del repo publico de GitHub con index.html. Si se deja vacio, no se publica codigo."
+      }
+    },
+    "branch": {
+      "type": "string",
+      "defaultValue": "main",
+      "metadata": {
+        "description": "Rama del repo que se publica."
+      }
+    }
+  },
+  "variables": {
+    "suffix": "[uniqueString(resourceGroup().id)]",
+    "storageAccountName": "[take(toLower(format('{0}st{1}', parameters('projectName'), variables('suffix'))), 24)]",
+    "appServicePlanName": "[format('{0}-plan-{1}', parameters('projectName'), variables('suffix'))]",
+    "webAppName": "[format('{0}-web-{1}', parameters('projectName'), variables('suffix'))]",
+    "tags": {
+      "project": "[parameters('projectName')]",
+      "environment": "[parameters('environment')]",
+      "deployedWith": "ARM template"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "minimumTlsVersion": "TLS1_2",
+        "supportsHttpsTrafficOnly": true,
+        "allowBlobPublicAccess": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-09-01",
+      "name": "[variables('appServicePlanName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "sku": {
+        "name": "[parameters('appServiceSku')]"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-09-01",
+      "name": "[variables('webAppName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "kind": "app",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "minTlsVersion": "1.2",
+          "ftpsState": "Disabled",
+          "appSettings": [
+            {
+              "name": "ENVIRONMENT",
+              "value": "[parameters('environment')]"
+            },
+            {
+              "name": "STORAGE_ACCOUNT_NAME",
+              "value": "[variables('storageAccountName')]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('repoUrl')))]",
+      "type": "Microsoft.Web/sites/sourcecontrols",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}/{1}', variables('webAppName'), 'web')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
+      ],
+      "properties": {
+        "repoUrl": "[parameters('repoUrl')]",
+        "branch": "[parameters('branch')]",
+        "isManualIntegration": true
+      }
+    }
+  ],
+  "outputs": {
+    "webAppUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('webAppName'))).defaultHostName)]"
+    },
+    "webAppName": {
+      "type": "string",
+      "value": "[variables('webAppName')]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[variables('storageAccountName')]"
+    }
+  }
+}

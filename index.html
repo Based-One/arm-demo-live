@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Desplegado con ARM</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #0b1f3a; color: #fff;
+           min-height: 100vh; display: grid; place-items: center; text-align: center; padding: 16px; }
+    .card { background: #12305a; padding: 40px; border-radius: 16px; max-width: 640px; }
+    h1 { margin-top: 0; }
+    code { background: #0b1f3a; padding: 2px 6px; border-radius: 4px; }
+    li { text-align: left; margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Hola desde Azure</h1>
+    <p>Esta pagina y toda la infraestructura que la sostiene se crearon con <strong>un solo archivo</strong>:
+       <code>azuredeploy.json</code> (ARM template).</p>
+    <ul>
+      <li>Storage Account (StorageV2, LRS, solo HTTPS)</li>
+      <li>App Service Plan (F1 gratis)</li>
+      <li>Web App (HTTPS only, TLS 1.2)</li>
+      <li>Codigo publicado desde el repositorio publico de GitHub</li>
+    </ul>
+    <p>Infrastructure as Code: si borras todo, un solo comando lo vuelve a crear identico.</p>
+  </div>
+</body>
+</html>
